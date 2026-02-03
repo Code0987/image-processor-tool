@@ -7,7 +7,7 @@ A Python-based desktop application for converting images between different forma
 - Output formats: JPG, JPEG, PNG, WEBP
 - Batch processing: select and convert multiple images at once
 - Transformations:
-  - Resize with optional aspect ratio maintenance
+  - Resize (optional; unchecked preserves original dimensions) with optional aspect ratio maintenance
   - Rotate by specified degrees
   - Convert to grayscale (remove colors)
   - Quality adjustment for JPG/WEBP

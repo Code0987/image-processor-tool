@@ -46,6 +46,7 @@ class ImageConverterApp:
         self.resize_width = tk.IntVar(value=self.config.get('resize_width', 800))
         self.resize_height = tk.IntVar(value=self.config.get('resize_height', 600))
         self.maintain_aspect = tk.BooleanVar(value=self.config.get('maintain_aspect_ratio', True))
+        self.enable_resize = tk.BooleanVar(value=self.config.get('enable_resize', False))
         self.rotate_degrees = tk.IntVar(value=self.config.get('rotate_degrees', 0))
         self.grayscale = tk.BooleanVar(value=self.config.get('grayscale', False))
         self.quality = tk.IntVar(value=self.config.get('quality', 85))
@@ -79,6 +80,7 @@ class ImageConverterApp:
         tk.Label(resize_frame, text="Height:").grid(row=0, column=2, padx=5)
         tk.Entry(resize_frame, textvariable=self.resize_height, width=10).grid(row=0, column=3)
         tk.Checkbutton(resize_frame, text="Maintain Aspect Ratio", variable=self.maintain_aspect).grid(row=1, column=0, columnspan=4, pady=5)
+        tk.Checkbutton(resize_frame, text="Enable Resize (leave unchecked to preserve original dimensions)", variable=self.enable_resize).grid(row=2, column=0, columnspan=4, pady=5)
         
         # Rotate
         rotate_frame = tk.Frame(self.root)
@@ -184,14 +186,15 @@ class ImageConverterApp:
                         img = frames[0]  # default to first
                 
                 # Apply transformations
-                # Resize
-                width = self.resize_width.get()
-                height = self.resize_height.get()
-                if width > 0 and height > 0:
-                    if self.maintain_aspect.get():
-                        img.thumbnail((width, height), Image.Resampling.LANCZOS)
-                    else:
-                        img = img.resize((width, height), Image.Resampling.LANCZOS)
+                # Resize (optional - if disabled, preserve original dimensions)
+                if self.enable_resize.get():
+                    width = self.resize_width.get()
+                    height = self.resize_height.get()
+                    if width > 0 and height > 0:
+                        if self.maintain_aspect.get():
+                            img.thumbnail((width, height), Image.Resampling.LANCZOS)
+                        else:
+                            img = img.resize((width, height), Image.Resampling.LANCZOS)
                 
                 # Rotate
                 degrees = self.rotate_degrees.get()
@@ -236,6 +239,7 @@ class ImageConverterApp:
                 f.write(f"resize_width: {self.resize_width.get()}\n")
                 f.write(f"resize_height: {self.resize_height.get()}\n")
                 f.write(f"maintain_aspect_ratio: {str(self.maintain_aspect.get()).lower()}\n")
+                f.write(f"enable_resize: {str(self.enable_resize.get()).lower()}\n")
                 f.write(f"rotate_degrees: {self.rotate_degrees.get()}\n")
                 f.write(f"grayscale: {str(self.grayscale.get()).lower()}\n")
                 f.write(f"quality: {self.quality.get()}\n")
@@ -251,6 +255,7 @@ class ImageConverterApp:
             self.resize_width.set(self.config.get('resize_width', 800))
             self.resize_height.set(self.config.get('resize_height', 600))
             self.maintain_aspect.set(self.config.get('maintain_aspect_ratio', True))
+            self.enable_resize.set(self.config.get('enable_resize', False))
             self.rotate_degrees.set(self.config.get('rotate_degrees', 0))
             self.grayscale.set(self.config.get('grayscale', False))
             self.quality.set(self.config.get('quality', 85))
@@ -264,6 +269,7 @@ class ImageConverterApp:
         self.resize_width.set(self.default_config.get('resize_width', 800))
         self.resize_height.set(self.default_config.get('resize_height', 600))
         self.maintain_aspect.set(self.default_config.get('maintain_aspect_ratio', True))
+        self.enable_resize.set(False)
         self.rotate_degrees.set(self.default_config.get('rotate_degrees', 0))
         self.grayscale.set(self.default_config.get('grayscale', False))
         self.quality.set(self.default_config.get('quality', 85))
@@ -280,6 +286,7 @@ output_format: png
 resize_width: 800
 resize_height: 600
 maintain_aspect_ratio: true
+enable_resize: false
 rotate_degrees: 0
 grayscale: false
 quality: 85
