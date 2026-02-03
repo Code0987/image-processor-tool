@@ -40,8 +40,8 @@ class ImageConverterApp:
         self.config = load_yaml('config.yaml')
         self.default_config = self.config.copy()
         
-        self.input_path = tk.StringVar()
-        self.output_path = tk.StringVar()
+        self.input_paths = []
+        self.output_dir = tk.StringVar()
         self.output_format = tk.StringVar(value=self.config.get('output_format', 'png'))
         self.resize_width = tk.IntVar(value=self.config.get('resize_width', 800))
         self.resize_height = tk.IntVar(value=self.config.get('resize_height', 600))
@@ -55,9 +55,13 @@ class ImageConverterApp:
     
     def create_widgets(self):
         # Input section
-        tk.Label(self.root, text="Input Image:").pack(pady=5)
-        tk.Entry(self.root, textvariable=self.input_path, width=50).pack()
-        tk.Button(self.root, text="Browse", command=self.browse_input).pack(pady=5)
+        tk.Label(self.root, text="Input Images (multiple supported):").pack(pady=5)
+        self.input_listbox = tk.Listbox(self.root, height=5, width=60)
+        self.input_listbox.pack(pady=5)
+        input_btn_frame = tk.Frame(self.root)
+        input_btn_frame.pack()
+        tk.Button(input_btn_frame, text="Browse Images", command=self.browse_input).pack(side=tk.LEFT, padx=5)
+        tk.Button(input_btn_frame, text="Clear List", command=self.clear_inputs).pack(side=tk.LEFT, padx=5)
         
         # Format selection
         format_frame = tk.Frame(self.root)
@@ -99,14 +103,14 @@ class ImageConverterApp:
         tk.Entry(gif_frame, textvariable=self.gif_frame, width=5).pack(side=tk.LEFT, padx=5)
         
         # Output section
-        tk.Label(self.root, text="Output Path:").pack(pady=5)
-        tk.Entry(self.root, textvariable=self.output_path, width=50).pack()
-        tk.Button(self.root, text="Browse Output", command=self.browse_output).pack(pady=5)
+        tk.Label(self.root, text="Output Directory:").pack(pady=5)
+        tk.Entry(self.root, textvariable=self.output_dir, width=50).pack()
+        tk.Button(self.root, text="Browse Output Dir", command=self.browse_output).pack(pady=5)
         
         # Buttons
         btn_frame = tk.Frame(self.root)
         btn_frame.pack(pady=20)
-        tk.Button(btn_frame, text="Convert", command=self.convert_image, bg="green", fg="white", width=15).pack(side=tk.LEFT, padx=10)
+        tk.Button(btn_frame, text="Convert Batch", command=self.convert_images, bg="green", fg="white", width=15).pack(side=tk.LEFT, padx=10)
         tk.Button(btn_frame, text="Save Config", command=self.save_config, bg="blue", fg="white", width=15).pack(side=tk.LEFT, padx=10)
         tk.Button(btn_frame, text="Load Config", command=self.load_config, bg="blue", fg="white", width=15).pack(side=tk.LEFT, padx=10)
         tk.Button(btn_frame, text="Reset", command=self.reset_settings, bg="gray", fg="white", width=15).pack(side=tk.LEFT, padx=10)
@@ -116,20 +120,25 @@ class ImageConverterApp:
         self.preview_label.pack(pady=10)
     
     def browse_input(self):
-        file_path = filedialog.askopenfilename(
+        file_paths = filedialog.askopenfilenames(
             filetypes=[("Image files", "*.jpg *.jpeg *.png *.webp *.gif")]
         )
-        if file_path:
-            self.input_path.set(file_path)
-            self.show_preview(file_path)
+        if file_paths:
+            for path in file_paths:
+                if path not in self.input_paths:
+                    self.input_paths.append(path)
+                    self.input_listbox.insert(tk.END, os.path.basename(path))
+            if self.input_paths:
+                self.show_preview(self.input_paths[0])
+    
+    def clear_inputs(self):
+        self.input_paths = []
+        self.input_listbox.delete(0, tk.END)
     
     def browse_output(self):
-        file_path = filedialog.asksaveasfilename(
-            defaultextension=f".{self.output_format.get()}",
-            filetypes=[("Image files", f"*.{self.output_format.get()}")]
-        )
-        if file_path:
-            self.output_path.set(file_path)
+        dir_path = filedialog.askdirectory()
+        if dir_path:
+            self.output_dir.set(dir_path)
     
     def show_preview(self, file_path):
         try:
@@ -141,67 +150,88 @@ class ImageConverterApp:
         except Exception as e:
             messagebox.showerror("Preview Error", str(e))
     
-    def convert_image(self):
-        input_path = self.input_path.get()
-        output_path = self.output_path.get()
-        if not input_path or not output_path:
-            messagebox.showerror("Error", "Please select input and output paths")
+    def convert_images(self):
+        if not self.input_paths:
+            messagebox.showerror("Error", "Please select at least one input image")
             return
+        output_dir = self.output_dir.get()
+        if not output_dir:
+            messagebox.showerror("Error", "Please select output directory")
+            return
+        if not os.path.isdir(output_dir):
+            try:
+                os.makedirs(output_dir)
+            except Exception:
+                messagebox.showerror("Error", "Invalid output directory")
+                return
         
-        try:
-            # Open image
-            img = Image.open(input_path)
-            
-            # Handle GIF
-            output_format = self.output_format.get().lower()
-            if input_path.lower().endswith('.gif'):
-                frame_index = self.gif_frame.get()
-                frames = [frame.copy() for frame in ImageSequence.Iterator(img)]
-                if frame_index < len(frames):
-                    img = frames[frame_index]
-                else:
-                    img = frames[0]  # default to first
-            
-            # Apply transformations
-            # Resize
-            width = self.resize_width.get()
-            height = self.resize_height.get()
-            if width > 0 and height > 0:
-                if self.maintain_aspect.get():
-                    img.thumbnail((width, height), Image.Resampling.LANCZOS)
-                else:
-                    img = img.resize((width, height), Image.Resampling.LANCZOS)
-            
-            # Rotate
-            degrees = self.rotate_degrees.get()
-            if degrees != 0:
-                img = img.rotate(degrees, expand=True)
-            
-            # Grayscale
-            if self.grayscale.get():
-                img = ImageOps.grayscale(img)
-            
-            # Save with quality if applicable
-            save_kwargs = {}
-            if output_format in ['jpg', 'jpeg', 'webp']:
-                save_kwargs['quality'] = self.quality.get()
-            if output_format == 'webp':
-                save_kwargs['method'] = 6  # for better compression
-            
-            # Ensure correct extension
-            if not output_path.lower().endswith(f'.{output_format}'):
-                output_path += f'.{output_format}'
-            
-            img.save(output_path, format=output_format.upper() if output_format != 'jpg' else 'JPEG', **save_kwargs)
-            messagebox.showinfo("Success", f"Image converted and saved to {output_path}")
-        except Exception as e:
-            messagebox.showerror("Conversion Error", str(e))
+        output_format = self.output_format.get().lower()
+        success_count = 0
+        errors = []
+        
+        for input_path in self.input_paths:
+            try:
+                # Open image
+                img = Image.open(input_path)
+                
+                # Handle GIF
+                if input_path.lower().endswith('.gif'):
+                    frame_index = self.gif_frame.get()
+                    frames = [frame.copy() for frame in ImageSequence.Iterator(img)]
+                    if frame_index < len(frames):
+                        img = frames[frame_index]
+                    else:
+                        img = frames[0]  # default to first
+                
+                # Apply transformations
+                # Resize
+                width = self.resize_width.get()
+                height = self.resize_height.get()
+                if width > 0 and height > 0:
+                    if self.maintain_aspect.get():
+                        img.thumbnail((width, height), Image.Resampling.LANCZOS)
+                    else:
+                        img = img.resize((width, height), Image.Resampling.LANCZOS)
+                
+                # Rotate
+                degrees = self.rotate_degrees.get()
+                if degrees != 0:
+                    img = img.rotate(degrees, expand=True)
+                
+                # Grayscale
+                if self.grayscale.get():
+                    img = ImageOps.grayscale(img)
+                
+                # Save with quality if applicable
+                save_kwargs = {}
+                if output_format in ['jpg', 'jpeg', 'webp']:
+                    save_kwargs['quality'] = self.quality.get()
+                if output_format == 'webp':
+                    save_kwargs['method'] = 6  # for better compression
+                
+                # Generate output path
+                base_name = os.path.splitext(os.path.basename(input_path))[0]
+                output_path = os.path.join(output_dir, f"{base_name}.{output_format}")
+                
+                img.save(output_path, format=output_format.upper() if output_format != 'jpg' else 'JPEG', **save_kwargs)
+                success_count += 1
+            except Exception as e:
+                errors.append(f"{os.path.basename(input_path)}: {str(e)}")
+        
+        if success_count > 0:
+            msg = f"Successfully converted {success_count} image(s) to {output_dir}"
+            if errors:
+                msg += f"\n\nErrors: {len(errors)}"
+            messagebox.showinfo("Batch Success", msg)
+        else:
+            messagebox.showerror("Conversion Error", "\n".join(errors) if errors else "No images converted")
     
     def save_config(self):
         try:
             with open('config.yaml', 'w') as f:
                 f.write("# Image Converter Configuration\n")
-                f.write(f"input_format: {os.path.splitext(self.input_path.get())[1][1:] if self.input_path.get() else 'jpg'}\n")
+                input_format = os.path.splitext(self.input_paths[0])[1][1:] if self.input_paths else 'jpg'
+                f.write(f"input_format: {input_format}\n")
                 f.write(f"output_format: {self.output_format.get()}\n")
                 f.write(f"resize_width: {self.resize_width.get()}\n")
                 f.write(f"resize_height: {self.resize_height.get()}\n")
