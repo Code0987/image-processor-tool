@@ -1,0 +1,10 @@
+# Default configuration for image converter
+input_format: jpg
+output_format: png
+resize_width: 800
+resize_height: 600
+maintain_aspect_ratio: true
+rotate_degrees: 0
+grayscale: false
+quality: 85
+gif_frame: 0
