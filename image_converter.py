@@ -64,9 +64,9 @@ class ImageConverterApp:
         main_frame = tk.Frame(self.root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # Left: controls
+        # Left: controls (aligned vertically in single column)
         left_frame = tk.Frame(main_frame)
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=20)
         
         # Config selection section (for multiple reusable configs)
         config_frame = tk.LabelFrame(left_frame, text="Config File")
@@ -77,64 +77,64 @@ class ImageConverterApp:
         tk.Button(config_frame, text="Save", command=self.save_config).pack(side=tk.LEFT, padx=5)
         
         # Input section
-        tk.Label(left_frame, text="Input Images (multiple supported):").pack(pady=5)
+        tk.Label(left_frame, text="Input Images (multiple supported):", anchor="w").pack(pady=5, fill="x")
         self.input_listbox = tk.Listbox(left_frame, height=5, width=50)
-        self.input_listbox.pack(pady=5)
+        self.input_listbox.pack(pady=5, fill="x")
         # Bind selection change to update preview
         self.input_listbox.bind('<<ListboxSelect>>', self.on_list_select)
         input_btn_frame = tk.Frame(left_frame)
-        input_btn_frame.pack()
+        input_btn_frame.pack(fill="x")
         tk.Button(input_btn_frame, text="Browse Images", command=self.browse_input).pack(side=tk.LEFT, padx=5)
         tk.Button(input_btn_frame, text="Clear List", command=self.clear_inputs).pack(side=tk.LEFT, padx=5)
         
         # Format selection
         format_frame = tk.Frame(left_frame)
-        format_frame.pack(pady=10)
-        tk.Label(format_frame, text="Output Format:").grid(row=0, column=0)
+        format_frame.pack(pady=10, fill="x")
+        tk.Label(format_frame, text="Output Format:", anchor="w").pack(side=tk.LEFT)
         formats = ['jpg', 'jpeg', 'png', 'webp']
         format_combo = ttk.Combobox(format_frame, textvariable=self.output_format, values=formats, state="readonly")
-        format_combo.grid(row=0, column=1, padx=5)
+        format_combo.pack(side=tk.LEFT, padx=10)
         
         # Resize
         resize_frame = tk.LabelFrame(left_frame, text="Resize")
-        resize_frame.pack(pady=10, padx=20, fill="x")
-        tk.Label(resize_frame, text="Width:").grid(row=0, column=0, padx=5)
-        tk.Entry(resize_frame, textvariable=self.resize_width, width=10).grid(row=0, column=1)
-        tk.Label(resize_frame, text="Height:").grid(row=0, column=2, padx=5)
-        tk.Entry(resize_frame, textvariable=self.resize_height, width=10).grid(row=0, column=3)
-        tk.Checkbutton(resize_frame, text="Maintain Aspect Ratio", variable=self.maintain_aspect).grid(row=1, column=0, columnspan=4, pady=5)
-        tk.Checkbutton(resize_frame, text="Enable Resize (leave unchecked to preserve original dimensions)", variable=self.enable_resize).grid(row=2, column=0, columnspan=4, pady=5)
+        resize_frame.pack(pady=10, fill="x")
+        tk.Label(resize_frame, text="Width:").grid(row=0, column=0, padx=5, sticky="w")
+        tk.Entry(resize_frame, textvariable=self.resize_width, width=10).grid(row=0, column=1, padx=5)
+        tk.Label(resize_frame, text="Height:").grid(row=0, column=2, padx=5, sticky="w")
+        tk.Entry(resize_frame, textvariable=self.resize_height, width=10).grid(row=0, column=3, padx=5)
+        tk.Checkbutton(resize_frame, text="Maintain Aspect Ratio", variable=self.maintain_aspect).grid(row=1, column=0, columnspan=4, pady=5, sticky="w")
+        tk.Checkbutton(resize_frame, text="Enable Resize (leave unchecked to preserve original dimensions)", variable=self.enable_resize).grid(row=2, column=0, columnspan=4, pady=5, sticky="w")
         
         # Rotate
         rotate_frame = tk.Frame(left_frame)
-        rotate_frame.pack(pady=5)
-        tk.Label(rotate_frame, text="Rotate (degrees):").pack(side=tk.LEFT)
-        tk.Entry(rotate_frame, textvariable=self.rotate_degrees, width=10).pack(side=tk.LEFT, padx=5)
+        rotate_frame.pack(pady=5, fill="x")
+        tk.Label(rotate_frame, text="Rotate (degrees):", anchor="w").pack(side=tk.LEFT)
+        tk.Entry(rotate_frame, textvariable=self.rotate_degrees, width=10).pack(side=tk.LEFT, padx=10)
         
         # Options
         options_frame = tk.Frame(left_frame)
-        options_frame.pack(pady=10)
+        options_frame.pack(pady=10, fill="x")
         tk.Checkbutton(options_frame, text="Grayscale (Remove Colors)", variable=self.grayscale).pack(side=tk.LEFT, padx=10)
         
         quality_frame = tk.Frame(left_frame)
-        quality_frame.pack(pady=5)
-        tk.Label(quality_frame, text="Quality (1-100):").pack(side=tk.LEFT)
-        tk.Scale(quality_frame, from_=1, to=100, orient=tk.HORIZONTAL, variable=self.quality).pack(side=tk.LEFT, padx=5)
+        quality_frame.pack(pady=5, fill="x")
+        tk.Label(quality_frame, text="Quality (1-100):", anchor="w").pack(side=tk.LEFT)
+        tk.Scale(quality_frame, from_=1, to=100, orient=tk.HORIZONTAL, variable=self.quality).pack(side=tk.LEFT, padx=10)
         
         # GIF frame
         gif_frame = tk.Frame(left_frame)
-        gif_frame.pack(pady=5)
-        tk.Label(gif_frame, text="GIF Frame to Extract (0-based):").pack(side=tk.LEFT)
-        tk.Entry(gif_frame, textvariable=self.gif_frame, width=5).pack(side=tk.LEFT, padx=5)
+        gif_frame.pack(pady=5, fill="x")
+        tk.Label(gif_frame, text="GIF Frame to Extract (0-based):", anchor="w").pack(side=tk.LEFT)
+        tk.Entry(gif_frame, textvariable=self.gif_frame, width=5).pack(side=tk.LEFT, padx=10)
         
         # Output section
-        tk.Label(left_frame, text="Output Directory:").pack(pady=5)
-        tk.Entry(left_frame, textvariable=self.output_dir, width=50).pack()
-        tk.Button(left_frame, text="Browse Output Dir", command=self.browse_output).pack(pady=5)
+        tk.Label(left_frame, text="Output Directory:", anchor="w").pack(pady=5, fill="x")
+        tk.Entry(left_frame, textvariable=self.output_dir, width=50).pack(fill="x")
+        tk.Button(left_frame, text="Browse Output Dir", command=self.browse_output).pack(pady=5, anchor="w")
         
         # Buttons
         btn_frame = tk.Frame(left_frame)
-        btn_frame.pack(pady=20)
+        btn_frame.pack(pady=20, fill="x")
         tk.Button(btn_frame, text="Convert Batch", command=self.convert_images, bg="green", fg="white", width=15).pack(side=tk.LEFT, padx=10)
         tk.Button(btn_frame, text="Reset", command=self.reset_settings, bg="gray", fg="white", width=15).pack(side=tk.LEFT, padx=10)
         
