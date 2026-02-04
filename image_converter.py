@@ -150,11 +150,15 @@ class ImageConverterApp:
         # Note: Scale doesn't need, but entry could; here use scale bound
         tk.Scale(quality_frame, from_=1, to=100, orient=tk.HORIZONTAL, variable=self.quality).pack(side=tk.LEFT, padx=10)
         
-        # GIF frame (>=0)
+        # GIF frame slider (dynamic based on selected GIF)
+        self.gif_frame = tk.IntVar(value=0)
         gif_frame = tk.Frame(left_frame)
         gif_frame.pack(pady=5, fill="x")
         tk.Label(gif_frame, text="GIF Frame to Extract (0-based):", anchor="w").pack(side=tk.LEFT)
-        tk.Entry(gif_frame, textvariable=self.gif_frame, width=5, validate="key", validatecommand=vcmd_pos).pack(side=tk.LEFT, padx=10)
+        self.gif_slider = tk.Scale(gif_frame, from_=0, to=100, orient=tk.HORIZONTAL, variable=self.gif_frame, length=200)
+        self.gif_slider.pack(side=tk.LEFT, padx=10)
+        self.gif_max_label = tk.Label(gif_frame, text="(max: auto)")
+        self.gif_max_label.pack(side=tk.LEFT, padx=5)
         
         # Output section
         tk.Label(left_frame, text="Output Directory:", anchor="w").pack(pady=5, fill="x")
@@ -235,7 +239,21 @@ class ImageConverterApp:
         if selection:
             index = selection[0]
             if index < len(self.input_paths):
-                self.show_preview(self.input_paths[index])
+                path = self.input_paths[index]
+                self.show_preview(path)
+                # Update GIF slider range if GIF
+                if path.lower().endswith('.gif'):
+                    try:
+                        with Image.open(path) as img:
+                            frame_count = sum(1 for _ in ImageSequence.Iterator(img))
+                            self.gif_slider.config(to=max(0, frame_count - 1))
+                            self.gif_max_label.config(text=f"(max: {frame_count-1})")
+                    except:
+                        self.gif_slider.config(to=100)
+                        self.gif_max_label.config(text="(max: 100)")
+                else:
+                    self.gif_slider.config(to=100)
+                    self.gif_max_label.config(text="(max: N/A)")
     
     def browse_output(self):
         dir_path = filedialog.askdirectory()
