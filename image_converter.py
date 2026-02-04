@@ -34,8 +34,8 @@ class ImageConverterApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Image Converter")
-        self.root.geometry("1200x800")
-        self.root.minsize(1000, 600)
+        self.root.geometry("1250x850")
+        self.root.minsize(1100, 700)
         
         # Load config
         self.config = load_yaml('config.yaml')
@@ -129,12 +129,13 @@ class ImageConverterApp:
         tk.Button(btn_frame, text="Reset", command=self.reset_settings, bg="gray", fg="white", width=15).pack(side=tk.LEFT, padx=10)
         
         # Right: preview
-        right_frame = tk.Frame(main_frame, width=400)
+        right_frame = tk.Frame(main_frame, width=450)
         right_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=10)
         right_frame.pack_propagate(False)
         tk.Label(right_frame, text="Preview").pack(pady=5)
-        self.preview_label = tk.Label(right_frame, text="Preview will appear here\nafter loading input", bg="lightgray", width=50, height=25)
-        self.preview_label.pack(pady=10, padx=10)
+        # Use Canvas for fixed-size preview (prevents shrinking)
+        self.preview_canvas = tk.Canvas(right_frame, width=400, height=400, bg="lightgray")
+        self.preview_canvas.pack(pady=10, padx=10)
     
     def browse_input(self):
         file_paths = filedialog.askopenfilenames(
@@ -170,8 +171,15 @@ class ImageConverterApp:
             # Larger thumbnail for better visibility in right panel
             img.thumbnail((400, 400), Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(img)
-            self.preview_label.config(image=photo, text="")
-            self.preview_label.image = photo  # keep reference
+            # Clear and draw on canvas to maintain fixed size
+            self.preview_canvas.delete("all")
+            # Center the image
+            canvas_w = self.preview_canvas.winfo_width() or 400
+            canvas_h = self.preview_canvas.winfo_height() or 400
+            x = (canvas_w - photo.width()) // 2
+            y = (canvas_h - photo.height()) // 2
+            self.preview_canvas.create_image(x, y, anchor=tk.NW, image=photo)
+            self.preview_canvas.image = photo  # keep reference
         except Exception as e:
             messagebox.showerror("Preview Error", str(e))
     
