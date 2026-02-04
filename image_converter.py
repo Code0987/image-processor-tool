@@ -134,8 +134,6 @@ class ImageConverterApp:
         btn_frame = tk.Frame(left_frame)
         btn_frame.pack(pady=20)
         tk.Button(btn_frame, text="Convert Batch", command=self.convert_images, bg="green", fg="white", width=15).pack(side=tk.LEFT, padx=10)
-        tk.Button(btn_frame, text="Save Config", command=self.save_config, bg="blue", fg="white", width=15).pack(side=tk.LEFT, padx=10)
-        tk.Button(btn_frame, text="Load Config", command=self.load_config, bg="blue", fg="white", width=15).pack(side=tk.LEFT, padx=10)
         tk.Button(btn_frame, text="Reset", command=self.reset_settings, bg="gray", fg="white", width=15).pack(side=tk.LEFT, padx=10)
         
         # Right: preview
