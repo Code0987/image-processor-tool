@@ -3,6 +3,8 @@ from tkinter import filedialog, messagebox, ttk
 from PIL import Image, ImageOps, ImageSequence, ImageTk
 import os
 import sys
+import subprocess
+import platform
 
 # Simple YAML parser since no external deps allowed beyond PIL
 def load_yaml(file_path):
@@ -170,6 +172,19 @@ class ImageConverterApp:
         if file_path:
             self.config_path.set(file_path)
     
+    def open_output_folder(self, folder_path):
+        """Open output folder in file explorer (cross-platform)."""
+        try:
+            if platform.system() == "Windows":
+                os.startfile(folder_path)
+            elif platform.system() == "Darwin":  # macOS
+                subprocess.Popen(["open", folder_path])
+            else:  # Linux and others
+                subprocess.Popen(["xdg-open", folder_path])
+        except Exception:
+            # Fallback: just show message, don't crash
+            pass
+    
     def on_list_select(self, event):
         selection = self.input_listbox.curselection()
         if selection:
@@ -274,6 +289,8 @@ class ImageConverterApp:
             if errors:
                 msg += f"\n\nErrors: {len(errors)}"
             messagebox.showinfo("Batch Success", msg)
+            # Open output folder for user to see results
+            self.open_output_folder(output_dir)
         else:
             messagebox.showerror("Conversion Error", "\n".join(errors) if errors else "No images converted")
     

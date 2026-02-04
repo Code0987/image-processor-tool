@@ -24,7 +24,7 @@ A Python-based desktop application for converting images between different forma
 3. Choose output format
 4. Select output directory (images will be saved with original base names + new format)
 5. Apply desired transformations (applied to all images)
-6. Click "Convert Batch"
+6. Click "Convert Batch" (output folder auto-opens after success)
 7. Use Config section to browse/load/save multiple reusable config files (e.g. different presets)
 
 ## Config Files
