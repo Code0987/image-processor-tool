@@ -34,7 +34,7 @@ class ImageConverterApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Image Converter")
-        self.root.geometry("1000x700")
+        self.root.geometry("1100x750")
         
         # Load config
         self.config = load_yaml('config.yaml')
@@ -67,6 +67,8 @@ class ImageConverterApp:
         tk.Label(left_frame, text="Input Images (multiple supported):").pack(pady=5)
         self.input_listbox = tk.Listbox(left_frame, height=5, width=50)
         self.input_listbox.pack(pady=5)
+        # Bind selection change to update preview
+        self.input_listbox.bind('<<ListboxSelect>>', self.on_list_select)
         input_btn_frame = tk.Frame(left_frame)
         input_btn_frame.pack()
         tk.Button(input_btn_frame, text="Browse Images", command=self.browse_input).pack(side=tk.LEFT, padx=5)
@@ -126,11 +128,11 @@ class ImageConverterApp:
         tk.Button(btn_frame, text="Reset", command=self.reset_settings, bg="gray", fg="white", width=15).pack(side=tk.LEFT, padx=10)
         
         # Right: preview
-        right_frame = tk.Frame(main_frame, width=300)
+        right_frame = tk.Frame(main_frame, width=350)
         right_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=10)
         right_frame.pack_propagate(False)
         tk.Label(right_frame, text="Preview").pack(pady=5)
-        self.preview_label = tk.Label(right_frame, text="Preview will appear here\nafter loading input", bg="lightgray", width=30, height=15)
+        self.preview_label = tk.Label(right_frame, text="Preview will appear here\nafter loading input", bg="lightgray", width=40, height=20)
         self.preview_label.pack(pady=10, padx=10)
     
     def browse_input(self):
@@ -149,6 +151,13 @@ class ImageConverterApp:
         self.input_paths = []
         self.input_listbox.delete(0, tk.END)
     
+    def on_list_select(self, event):
+        selection = self.input_listbox.curselection()
+        if selection:
+            index = selection[0]
+            if index < len(self.input_paths):
+                self.show_preview(self.input_paths[index])
+    
     def browse_output(self):
         dir_path = filedialog.askdirectory()
         if dir_path:
@@ -157,7 +166,8 @@ class ImageConverterApp:
     def show_preview(self, file_path):
         try:
             img = Image.open(file_path)
-            img.thumbnail((200, 200))
+            # Larger thumbnail for better visibility in right panel
+            img.thumbnail((300, 300), Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(img)
             self.preview_label.config(image=photo, text="")
             self.preview_label.image = photo  # keep reference
