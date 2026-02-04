@@ -25,8 +25,8 @@ A Python-based desktop application for converting images between different forma
 4. Select output directory (images will be saved with original base names + new format)
 5. Apply desired transformations (applied to all images)
 6. Click "Convert Batch"
-7. Use Save/Load Config for reusable settings
+7. Use Config section to browse/load/save multiple reusable config files (e.g. different presets)
 
-## Config File (config.yaml)
-The application uses a config.yaml file to store default settings which can be modified and reloaded.
+## Config Files
+Supports multiple user-selected .yaml files (default: config.yaml) for saving/loading settings. Browse button allows selecting/creating different configs for various use cases.
 

@@ -37,8 +37,10 @@ class ImageConverterApp:
         self.root.geometry("1250x850")
         self.root.minsize(1100, 700)
         
-        # Load config
-        self.config = load_yaml('config.yaml')
+        # Config file handling (user selectable for multiple configs)
+        self.config_path = tk.StringVar(value='config.yaml')
+        # Load initial config
+        self.config = load_yaml(self.config_path.get())
         self.default_config = self.config.copy()
         
         self.input_paths = []
@@ -63,6 +65,14 @@ class ImageConverterApp:
         # Left: controls
         left_frame = tk.Frame(main_frame)
         left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Config selection section (for multiple reusable configs)
+        config_frame = tk.LabelFrame(left_frame, text="Config File")
+        config_frame.pack(pady=5, fill="x")
+        tk.Entry(config_frame, textvariable=self.config_path, width=40).pack(side=tk.LEFT, padx=5)
+        tk.Button(config_frame, text="Browse Config", command=self.browse_config).pack(side=tk.LEFT, padx=5)
+        tk.Button(config_frame, text="Load", command=self.load_config).pack(side=tk.LEFT, padx=5)
+        tk.Button(config_frame, text="Save", command=self.save_config).pack(side=tk.LEFT, padx=5)
         
         # Input section
         tk.Label(left_frame, text="Input Images (multiple supported):").pack(pady=5)
@@ -152,6 +162,15 @@ class ImageConverterApp:
     def clear_inputs(self):
         self.input_paths = []
         self.input_listbox.delete(0, tk.END)
+    
+    def browse_config(self):
+        file_path = filedialog.askopenfilename(
+            filetypes=[("YAML files", "*.yaml *.yml"), ("All files", "*.*")],
+            initialdir=".",
+            defaultextension=".yaml"
+        )
+        if file_path:
+            self.config_path.set(file_path)
     
     def on_list_select(self, event):
         selection = self.input_listbox.curselection()
@@ -261,8 +280,9 @@ class ImageConverterApp:
             messagebox.showerror("Conversion Error", "\n".join(errors) if errors else "No images converted")
     
     def save_config(self):
+        config_file = self.config_path.get()
         try:
-            with open('config.yaml', 'w') as f:
+            with open(config_file, 'w') as f:
                 f.write("# Image Converter Configuration\n")
                 input_format = os.path.splitext(self.input_paths[0])[1][1:] if self.input_paths else 'jpg'
                 f.write(f"input_format: {input_format}\n")
@@ -275,12 +295,13 @@ class ImageConverterApp:
                 f.write(f"grayscale: {str(self.grayscale.get()).lower()}\n")
                 f.write(f"quality: {self.quality.get()}\n")
                 f.write(f"gif_frame: {self.gif_frame.get()}\n")
-            messagebox.showinfo("Success", "Config saved to config.yaml")
+            messagebox.showinfo("Success", f"Config saved to {config_file}")
         except Exception as e:
             messagebox.showerror("Save Error", str(e))
     
     def load_config(self):
-        self.config = load_yaml('config.yaml')
+        config_file = self.config_path.get()
+        self.config = load_yaml(config_file)
         if self.config:
             self.output_format.set(self.config.get('output_format', 'png'))
             self.resize_width.set(self.config.get('resize_width', 800))
@@ -291,16 +312,18 @@ class ImageConverterApp:
             self.grayscale.set(self.config.get('grayscale', False))
             self.quality.set(self.config.get('quality', 85))
             self.gif_frame.set(self.config.get('gif_frame', 0))
-            messagebox.showinfo("Success", "Config loaded")
+            messagebox.showinfo("Success", f"Config loaded from {config_file}")
+            # Update default_config for reset
+            self.default_config = self.config.copy()
         else:
-            messagebox.showwarning("Load Warning", "Could not load config")
+            messagebox.showwarning("Load Warning", f"Could not load config from {config_file}")
     
     def reset_settings(self):
         self.output_format.set(self.default_config.get('output_format', 'png'))
         self.resize_width.set(self.default_config.get('resize_width', 800))
         self.resize_height.set(self.default_config.get('resize_height', 600))
         self.maintain_aspect.set(self.default_config.get('maintain_aspect_ratio', True))
-        self.enable_resize.set(False)
+        self.enable_resize.set(self.default_config.get('enable_resize', False))
         self.rotate_degrees.set(self.default_config.get('rotate_degrees', 0))
         self.grayscale.set(self.default_config.get('grayscale', False))
         self.quality.set(self.default_config.get('quality', 85))
