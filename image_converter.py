@@ -299,9 +299,10 @@ class ImageConverterApp:
                     self.frame_info_label.config(text="GIF Frames: Unknown")
             else:
                 self.frame_info_label.config(text="")
-        except Exception as e:
-            messagebox.showerror("Preview Error", str(e))
-            self.frame_info_label.config(text="")
+        except Exception:
+            # Silent fail for temp invalid states during typing; real errors logged internally
+            self.frame_info_label.config(text="Preview unavailable (check inputs)")
+            # Do not show popup for transient errors
     
     def convert_images(self):
         if not self.input_paths:
