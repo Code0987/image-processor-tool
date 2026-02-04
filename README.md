@@ -6,6 +6,7 @@ A Python-based desktop application for converting images between different forma
 - Support for input formats: JPG, JPEG, PNG, WEBP, GIF (with frame selection for GIF)
 - Output formats: JPG, JPEG, PNG, WEBP
 - Batch processing: select and convert multiple images at once
+- GIF support: auto-detects & shows frame count below preview when GIF selected
 - Transformations:
   - Resize (optional; unchecked preserves original dimensions) with optional aspect ratio maintenance
   - Rotate by specified degrees

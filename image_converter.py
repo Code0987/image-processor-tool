@@ -146,6 +146,9 @@ class ImageConverterApp:
         # Use Canvas for fixed-size preview (prevents shrinking)
         self.preview_canvas = tk.Canvas(right_frame, width=400, height=400, bg="lightgray")
         self.preview_canvas.pack(pady=10, padx=10)
+        # Frame info label (for GIFs)
+        self.frame_info_label = tk.Label(right_frame, text="", fg="blue")
+        self.frame_info_label.pack(pady=5)
     
     def browse_input(self):
         file_paths = filedialog.askopenfilenames(
@@ -212,8 +215,20 @@ class ImageConverterApp:
             y = (canvas_h - photo.height()) // 2
             self.preview_canvas.create_image(x, y, anchor=tk.NW, image=photo)
             self.preview_canvas.image = photo  # keep reference
+            
+            # Show frame count for GIFs
+            if file_path.lower().endswith('.gif'):
+                try:
+                    frames = [frame.copy() for frame in ImageSequence.Iterator(img)]
+                    frame_count = len(frames)
+                    self.frame_info_label.config(text=f"GIF Frames: {frame_count} (use 0-{frame_count-1} in GIF Frame field)")
+                except:
+                    self.frame_info_label.config(text="GIF Frames: Unknown")
+            else:
+                self.frame_info_label.config(text="")
         except Exception as e:
             messagebox.showerror("Preview Error", str(e))
+            self.frame_info_label.config(text="")
     
     def convert_images(self):
         if not self.input_paths:
