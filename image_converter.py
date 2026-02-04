@@ -34,7 +34,8 @@ class ImageConverterApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Image Converter")
-        self.root.geometry("1100x750")
+        self.root.geometry("1200x800")
+        self.root.minsize(1000, 600)
         
         # Load config
         self.config = load_yaml('config.yaml')
@@ -128,11 +129,11 @@ class ImageConverterApp:
         tk.Button(btn_frame, text="Reset", command=self.reset_settings, bg="gray", fg="white", width=15).pack(side=tk.LEFT, padx=10)
         
         # Right: preview
-        right_frame = tk.Frame(main_frame, width=350)
+        right_frame = tk.Frame(main_frame, width=400)
         right_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=10)
         right_frame.pack_propagate(False)
         tk.Label(right_frame, text="Preview").pack(pady=5)
-        self.preview_label = tk.Label(right_frame, text="Preview will appear here\nafter loading input", bg="lightgray", width=40, height=20)
+        self.preview_label = tk.Label(right_frame, text="Preview will appear here\nafter loading input", bg="lightgray", width=50, height=25)
         self.preview_label.pack(pady=10, padx=10)
     
     def browse_input(self):
@@ -167,7 +168,7 @@ class ImageConverterApp:
         try:
             img = Image.open(file_path)
             # Larger thumbnail for better visibility in right panel
-            img.thumbnail((300, 300), Image.Resampling.LANCZOS)
+            img.thumbnail((400, 400), Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(img)
             self.preview_label.config(image=photo, text="")
             self.preview_label.image = photo  # keep reference
