@@ -57,6 +57,11 @@ class ImageConverterApp:
         self.quality = tk.IntVar(value=self.config.get('quality', 85))
         self.gif_frame = tk.IntVar(value=self.config.get('gif_frame', 0))
         
+        # Traces for live preview updates when transformations change
+        for var in [self.enable_resize, self.resize_width, self.resize_height, self.maintain_aspect,
+                    self.rotate_degrees, self.grayscale, self.quality, self.gif_frame]:
+            var.trace('w', self._update_preview_if_image_selected)
+        
         self.create_widgets()
     
     def create_widgets(self):
@@ -175,6 +180,15 @@ class ImageConverterApp:
         if file_path:
             self.config_path.set(file_path)
     
+    def _update_preview_if_image_selected(self, *args):
+        """Live update preview when transformation settings change."""
+        if self.input_paths:
+            # Use first selected or current list selection
+            selection = self.input_listbox.curselection()
+            idx = selection[0] if selection else 0
+            if idx < len(self.input_paths):
+                self.show_preview(self.input_paths[idx])
+    
     def open_output_folder(self, folder_path):
         """Open output folder in file explorer (cross-platform)."""
         try:
@@ -202,13 +216,45 @@ class ImageConverterApp:
     
     def show_preview(self, file_path):
         try:
+            # Load original
             img = Image.open(file_path)
-            # Larger thumbnail for better visibility in right panel
-            img.thumbnail((400, 400), Image.Resampling.LANCZOS)
-            photo = ImageTk.PhotoImage(img)
-            # Clear and draw on canvas to maintain fixed size
+            
+            # Apply current transformations for live preview (same as convert logic)
+            # Handle GIF (extract frame)
+            if file_path.lower().endswith('.gif'):
+                frame_index = self.gif_frame.get()
+                frames = [frame.copy() for frame in ImageSequence.Iterator(img)]
+                if frame_index < len(frames):
+                    img = frames[frame_index]
+                else:
+                    img = frames[0] if frames else img
+            
+            # Resize if enabled
+            if self.enable_resize.get():
+                width = self.resize_width.get()
+                height = self.resize_height.get()
+                if width > 0 and height > 0:
+                    if self.maintain_aspect.get():
+                        img.thumbnail((width, height), Image.Resampling.LANCZOS)
+                    else:
+                        img = img.resize((width, height), Image.Resampling.LANCZOS)
+            
+            # Rotate
+            degrees = self.rotate_degrees.get()
+            if degrees != 0:
+                img = img.rotate(degrees, expand=True)
+            
+            # Grayscale
+            if self.grayscale.get():
+                img = ImageOps.grayscale(img)
+            
+            # Generate thumbnail for display
+            display_img = img.copy()
+            display_img.thumbnail((400, 400), Image.Resampling.LANCZOS)
+            photo = ImageTk.PhotoImage(display_img)
+            
+            # Clear and draw on canvas
             self.preview_canvas.delete("all")
-            # Center the image
             canvas_w = self.preview_canvas.winfo_width() or 400
             canvas_h = self.preview_canvas.winfo_height() or 400
             x = (canvas_w - photo.width()) // 2
@@ -219,8 +265,7 @@ class ImageConverterApp:
             # Show frame count for GIFs
             if file_path.lower().endswith('.gif'):
                 try:
-                    frames = [frame.copy() for frame in ImageSequence.Iterator(img)]
-                    frame_count = len(frames)
+                    frame_count = len(frames) if 'frames' in locals() else 0
                     self.frame_info_label.config(text=f"GIF Frames: {frame_count} (use 0-{frame_count-1} in GIF Frame field)")
                 except:
                     self.frame_info_label.config(text="GIF Frames: Unknown")
