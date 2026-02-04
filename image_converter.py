@@ -64,6 +64,26 @@ class ImageConverterApp:
         
         self.create_widgets()
     
+    def validate_positive_int(self, P):
+        """Validate positive int or empty for entries."""
+        if P == "":
+            return True
+        try:
+            val = int(P)
+            return val >= 0
+        except ValueError:
+            return False
+    
+    def validate_quality(self, P):
+        """Validate quality 1-100."""
+        if P == "":
+            return True
+        try:
+            val = int(P)
+            return 1 <= val <= 100
+        except ValueError:
+            return False
+    
     def create_widgets(self):
         # Main layout: left controls, right preview
         main_frame = tk.Frame(self.root)
@@ -104,17 +124,19 @@ class ImageConverterApp:
         resize_frame = tk.LabelFrame(left_frame, text="Resize")
         resize_frame.pack(pady=10, fill="x")
         tk.Label(resize_frame, text="Width:").grid(row=0, column=0, padx=5, sticky="w")
-        tk.Entry(resize_frame, textvariable=self.resize_width, width=10).grid(row=0, column=1, padx=5)
+        vcmd_pos = (self.root.register(self.validate_positive_int), '%P')
+        tk.Entry(resize_frame, textvariable=self.resize_width, width=10, validate="key", validatecommand=vcmd_pos).grid(row=0, column=1, padx=5)
         tk.Label(resize_frame, text="Height:").grid(row=0, column=2, padx=5, sticky="w")
-        tk.Entry(resize_frame, textvariable=self.resize_height, width=10).grid(row=0, column=3, padx=5)
+        tk.Entry(resize_frame, textvariable=self.resize_height, width=10, validate="key", validatecommand=vcmd_pos).grid(row=0, column=3, padx=5)
         tk.Checkbutton(resize_frame, text="Maintain Aspect Ratio", variable=self.maintain_aspect).grid(row=1, column=0, columnspan=4, pady=5, sticky="w")
         tk.Checkbutton(resize_frame, text="Enable Resize (leave unchecked to preserve original dimensions)", variable=self.enable_resize).grid(row=2, column=0, columnspan=4, pady=5, sticky="w")
         
-        # Rotate
+        # Rotate (0-360)
         rotate_frame = tk.Frame(left_frame)
         rotate_frame.pack(pady=5, fill="x")
         tk.Label(rotate_frame, text="Rotate (degrees):", anchor="w").pack(side=tk.LEFT)
-        tk.Entry(rotate_frame, textvariable=self.rotate_degrees, width=10).pack(side=tk.LEFT, padx=10)
+        vcmd_rot = (self.root.register(self.validate_positive_int), '%P')
+        tk.Entry(rotate_frame, textvariable=self.rotate_degrees, width=10, validate="key", validatecommand=vcmd_rot).pack(side=tk.LEFT, padx=10)
         
         # Options
         options_frame = tk.Frame(left_frame)
@@ -124,13 +146,15 @@ class ImageConverterApp:
         quality_frame = tk.Frame(left_frame)
         quality_frame.pack(pady=5, fill="x")
         tk.Label(quality_frame, text="Quality (1-100):", anchor="w").pack(side=tk.LEFT)
+        vcmd_qual = (self.root.register(self.validate_quality), '%P')
+        # Note: Scale doesn't need, but entry could; here use scale bound
         tk.Scale(quality_frame, from_=1, to=100, orient=tk.HORIZONTAL, variable=self.quality).pack(side=tk.LEFT, padx=10)
         
-        # GIF frame
+        # GIF frame (>=0)
         gif_frame = tk.Frame(left_frame)
         gif_frame.pack(pady=5, fill="x")
         tk.Label(gif_frame, text="GIF Frame to Extract (0-based):", anchor="w").pack(side=tk.LEFT)
-        tk.Entry(gif_frame, textvariable=self.gif_frame, width=5).pack(side=tk.LEFT, padx=10)
+        tk.Entry(gif_frame, textvariable=self.gif_frame, width=5, validate="key", validatecommand=vcmd_pos).pack(side=tk.LEFT, padx=10)
         
         # Output section
         tk.Label(left_frame, text="Output Directory:", anchor="w").pack(pady=5, fill="x")
@@ -222,7 +246,7 @@ class ImageConverterApp:
             # Apply current transformations for live preview (same as convert logic)
             # Handle GIF (extract frame)
             if file_path.lower().endswith('.gif'):
-                frame_index = self.gif_frame.get()
+                frame_index = max(0, self.gif_frame.get())
                 frames = [frame.copy() for frame in ImageSequence.Iterator(img)]
                 if frame_index < len(frames):
                     img = frames[frame_index]
@@ -231,16 +255,16 @@ class ImageConverterApp:
             
             # Resize if enabled
             if self.enable_resize.get():
-                width = self.resize_width.get()
-                height = self.resize_height.get()
+                width = max(1, self.resize_width.get())
+                height = max(1, self.resize_height.get())
                 if width > 0 and height > 0:
                     if self.maintain_aspect.get():
                         img.thumbnail((width, height), Image.Resampling.LANCZOS)
                     else:
                         img = img.resize((width, height), Image.Resampling.LANCZOS)
             
-            # Rotate
-            degrees = self.rotate_degrees.get()
+            # Rotate (clamp 0-360)
+            degrees = max(0, min(360, self.rotate_degrees.get()))
             if degrees != 0:
                 img = img.rotate(degrees, expand=True)
             
@@ -301,7 +325,7 @@ class ImageConverterApp:
                 
                 # Handle GIF
                 if input_path.lower().endswith('.gif'):
-                    frame_index = self.gif_frame.get()
+                    frame_index = max(0, self.gif_frame.get())
                     frames = [frame.copy() for frame in ImageSequence.Iterator(img)]
                     if frame_index < len(frames):
                         img = frames[frame_index]
@@ -311,16 +335,16 @@ class ImageConverterApp:
                 # Apply transformations
                 # Resize (optional - if disabled, preserve original dimensions)
                 if self.enable_resize.get():
-                    width = self.resize_width.get()
-                    height = self.resize_height.get()
+                    width = max(1, self.resize_width.get())
+                    height = max(1, self.resize_height.get())
                     if width > 0 and height > 0:
                         if self.maintain_aspect.get():
                             img.thumbnail((width, height), Image.Resampling.LANCZOS)
                         else:
                             img = img.resize((width, height), Image.Resampling.LANCZOS)
                 
-                # Rotate
-                degrees = self.rotate_degrees.get()
+                # Rotate (clamp 0-360)
+                degrees = max(0, min(360, self.rotate_degrees.get()))
                 if degrees != 0:
                     img = img.rotate(degrees, expand=True)
                 
@@ -328,10 +352,11 @@ class ImageConverterApp:
                 if self.grayscale.get():
                     img = ImageOps.grayscale(img)
                 
-                # Save with quality if applicable
+                # Save with quality if applicable (clamp 1-100)
                 save_kwargs = {}
+                quality = max(1, min(100, self.quality.get()))
                 if output_format in ['jpg', 'jpeg', 'webp']:
-                    save_kwargs['quality'] = self.quality.get()
+                    save_kwargs['quality'] = quality
                 if output_format == 'webp':
                     save_kwargs['method'] = 6  # for better compression
                 
