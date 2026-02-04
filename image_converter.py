@@ -211,7 +211,11 @@ class ImageConverterApp:
             selection = self.input_listbox.curselection()
             idx = selection[0] if selection else 0
             if idx < len(self.input_paths):
-                self.show_preview(self.input_paths[idx])
+                try:
+                    self.show_preview(self.input_paths[idx])
+                except:
+                    # Ignore temp invalid during typing
+                    pass
     
     def open_output_folder(self, folder_path):
         """Open output folder in file explorer (cross-platform)."""
