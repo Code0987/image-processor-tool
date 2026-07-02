@@ -1,36 +1,21 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
-from PIL import Image, ImageOps, ImageSequence, ImageTk
+from PIL import Image, ImageTk
 import os
-import sys
 import subprocess
 import platform
 
-# Simple YAML parser since no external deps allowed beyond PIL
-def load_yaml(file_path):
-    config = {}
-    try:
-        with open(file_path, 'r') as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#'):
-                    if ':' in line:
-                        key, value = line.split(':', 1)
-                        key = key.strip()
-                        value = value.strip()
-                        # Convert types
-                        if value.lower() == 'true':
-                            value = True
-                        elif value.lower() == 'false':
-                            value = False
-                        elif value.isdigit():
-                            value = int(value)
-                        elif value.replace('.', '', 1).isdigit():
-                            value = float(value)
-                        config[key] = value
-    except Exception:
-        pass
-    return config
+from image_ops import (
+    load_yaml,
+    is_positive_int_or_empty,
+    is_valid_quality,
+    extract_gif_frame,
+    count_gif_frames,
+    apply_transforms,
+    convert_single_image,
+    save_config_file,
+)
+
 
 class ImageConverterApp:
     def __init__(self, root):
@@ -66,23 +51,11 @@ class ImageConverterApp:
     
     def validate_positive_int(self, P):
         """Validate positive int or empty for entries."""
-        if P == "":
-            return True
-        try:
-            val = int(P)
-            return val >= 0
-        except ValueError:
-            return False
+        return is_positive_int_or_empty(P)
     
     def validate_quality(self, P):
         """Validate quality 1-100."""
-        if P == "":
-            return True
-        try:
-            val = int(P)
-            return 1 <= val <= 100
-        except ValueError:
-            return False
+        return is_valid_quality(P)
     
     def create_widgets(self):
         # Main layout: left controls, right preview
@@ -244,11 +217,10 @@ class ImageConverterApp:
                 # Update GIF slider range if GIF
                 if path.lower().endswith('.gif'):
                     try:
-                        with Image.open(path) as img:
-                            frame_count = sum(1 for _ in ImageSequence.Iterator(img))
-                            self.gif_slider.config(to=max(0, frame_count - 1))
-                            self.gif_max_label.config(text=f"(max: {frame_count-1})")
-                    except:
+                        frame_count = count_gif_frames(path)
+                        self.gif_slider.config(to=max(0, frame_count - 1))
+                        self.gif_max_label.config(text=f"(max: {frame_count-1})")
+                    except Exception:
                         self.gif_slider.config(to=100)
                         self.gif_max_label.config(text="(max: 100)")
                 else:
@@ -262,43 +234,30 @@ class ImageConverterApp:
     
     def show_preview(self, file_path):
         try:
-            # Load original
             img = Image.open(file_path)
-            
+
             # Apply current transformations for live preview (same as convert logic)
-            # Handle GIF (extract frame)
             if file_path.lower().endswith('.gif'):
-                frame_index = max(0, self.gif_frame.get())
-                frames = [frame.copy() for frame in ImageSequence.Iterator(img)]
-                if frame_index < len(frames):
-                    img = frames[frame_index]
-                else:
-                    img = frames[0] if frames else img
-            
-            # Resize if enabled
-            if self.enable_resize.get():
-                width = max(1, self.resize_width.get())
-                height = max(1, self.resize_height.get())
-                if width > 0 and height > 0:
-                    if self.maintain_aspect.get():
-                        img.thumbnail((width, height), Image.Resampling.LANCZOS)
-                    else:
-                        img = img.resize((width, height), Image.Resampling.LANCZOS)
-            
-            # Rotate (clamp 0-360)
-            degrees = max(0, min(360, self.rotate_degrees.get()))
-            if degrees != 0:
-                img = img.rotate(degrees, expand=True)
-            
-            # Grayscale
-            if self.grayscale.get():
-                img = ImageOps.grayscale(img)
-            
+                frame_count = count_gif_frames(file_path)
+                img = extract_gif_frame(img, self.gif_frame.get())
+            else:
+                frame_count = None
+
+            img = apply_transforms(
+                img,
+                enable_resize=self.enable_resize.get(),
+                resize_width=self.resize_width.get(),
+                resize_height=self.resize_height.get(),
+                maintain_aspect=self.maintain_aspect.get(),
+                rotate_degrees=self.rotate_degrees.get(),
+                grayscale=self.grayscale.get(),
+            )
+
             # Generate thumbnail for display
             display_img = img.copy()
             display_img.thumbnail((400, 400), Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(display_img)
-            
+
             # Clear and draw on canvas
             self.preview_canvas.delete("all")
             canvas_w = self.preview_canvas.winfo_width() or 400
@@ -307,14 +266,11 @@ class ImageConverterApp:
             y = (canvas_h - photo.height()) // 2
             self.preview_canvas.create_image(x, y, anchor=tk.NW, image=photo)
             self.preview_canvas.image = photo  # keep reference
-            
-            # Show frame count for GIFs
-            if file_path.lower().endswith('.gif'):
-                try:
-                    frame_count = len(frames) if 'frames' in locals() else 0
-                    self.frame_info_label.config(text=f"GIF Frames: {frame_count} (use 0-{frame_count-1} in GIF Frame field)")
-                except:
-                    self.frame_info_label.config(text="GIF Frames: Unknown")
+
+            if frame_count is not None:
+                self.frame_info_label.config(
+                    text=f"GIF Frames: {frame_count} (use 0-{frame_count-1} in GIF Frame field)"
+                )
             else:
                 self.frame_info_label.config(text="")
         except Exception:
@@ -343,51 +299,19 @@ class ImageConverterApp:
         
         for input_path in self.input_paths:
             try:
-                # Open image
-                img = Image.open(input_path)
-                
-                # Handle GIF
-                if input_path.lower().endswith('.gif'):
-                    frame_index = max(0, self.gif_frame.get())
-                    frames = [frame.copy() for frame in ImageSequence.Iterator(img)]
-                    if frame_index < len(frames):
-                        img = frames[frame_index]
-                    else:
-                        img = frames[0]  # default to first
-                
-                # Apply transformations
-                # Resize (optional - if disabled, preserve original dimensions)
-                if self.enable_resize.get():
-                    width = max(1, self.resize_width.get())
-                    height = max(1, self.resize_height.get())
-                    if width > 0 and height > 0:
-                        if self.maintain_aspect.get():
-                            img.thumbnail((width, height), Image.Resampling.LANCZOS)
-                        else:
-                            img = img.resize((width, height), Image.Resampling.LANCZOS)
-                
-                # Rotate (clamp 0-360)
-                degrees = max(0, min(360, self.rotate_degrees.get()))
-                if degrees != 0:
-                    img = img.rotate(degrees, expand=True)
-                
-                # Grayscale
-                if self.grayscale.get():
-                    img = ImageOps.grayscale(img)
-                
-                # Save with quality if applicable (clamp 1-100)
-                save_kwargs = {}
-                quality = max(1, min(100, self.quality.get()))
-                if output_format in ['jpg', 'jpeg', 'webp']:
-                    save_kwargs['quality'] = quality
-                if output_format == 'webp':
-                    save_kwargs['method'] = 6  # for better compression
-                
-                # Generate output path
-                base_name = os.path.splitext(os.path.basename(input_path))[0]
-                output_path = os.path.join(output_dir, f"{base_name}.{output_format}")
-                
-                img.save(output_path, format=output_format.upper() if output_format != 'jpg' else 'JPEG', **save_kwargs)
+                convert_single_image(
+                    input_path,
+                    output_dir,
+                    output_format,
+                    enable_resize=self.enable_resize.get(),
+                    resize_width=self.resize_width.get(),
+                    resize_height=self.resize_height.get(),
+                    maintain_aspect=self.maintain_aspect.get(),
+                    rotate_degrees=self.rotate_degrees.get(),
+                    grayscale=self.grayscale.get(),
+                    quality=self.quality.get(),
+                    gif_frame=self.gif_frame.get(),
+                )
                 success_count += 1
             except Exception as e:
                 errors.append(f"{os.path.basename(input_path)}: {str(e)}")
@@ -405,19 +329,19 @@ class ImageConverterApp:
     def save_config(self):
         config_file = self.config_path.get()
         try:
-            with open(config_file, 'w') as f:
-                f.write("# Image Converter Configuration\n")
-                input_format = os.path.splitext(self.input_paths[0])[1][1:] if self.input_paths else 'jpg'
-                f.write(f"input_format: {input_format}\n")
-                f.write(f"output_format: {self.output_format.get()}\n")
-                f.write(f"resize_width: {self.resize_width.get()}\n")
-                f.write(f"resize_height: {self.resize_height.get()}\n")
-                f.write(f"maintain_aspect_ratio: {str(self.maintain_aspect.get()).lower()}\n")
-                f.write(f"enable_resize: {str(self.enable_resize.get()).lower()}\n")
-                f.write(f"rotate_degrees: {self.rotate_degrees.get()}\n")
-                f.write(f"grayscale: {str(self.grayscale.get()).lower()}\n")
-                f.write(f"quality: {self.quality.get()}\n")
-                f.write(f"gif_frame: {self.gif_frame.get()}\n")
+            input_format = os.path.splitext(self.input_paths[0])[1][1:] if self.input_paths else 'jpg'
+            settings = {
+                'output_format': self.output_format.get(),
+                'resize_width': self.resize_width.get(),
+                'resize_height': self.resize_height.get(),
+                'maintain_aspect_ratio': self.maintain_aspect.get(),
+                'enable_resize': self.enable_resize.get(),
+                'rotate_degrees': self.rotate_degrees.get(),
+                'grayscale': self.grayscale.get(),
+                'quality': self.quality.get(),
+                'gif_frame': self.gif_frame.get(),
+            }
+            save_config_file(config_file, settings, input_format=input_format)
             messagebox.showinfo("Success", f"Config saved to {config_file}")
         except Exception as e:
             messagebox.showerror("Save Error", str(e))

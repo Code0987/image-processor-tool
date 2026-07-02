@@ -19,6 +19,14 @@ A Python-based desktop application for converting images between different forma
 - Python 3.x
 - Pillow (PIL) library: `pip install pillow`
 
+## Tests
+Pure conversion/config logic lives in `image_ops.py` (no Tkinter required).
+
+```bash
+pip install -r requirements.txt
+pytest tests/ -v
+```
+
 ## Usage
 1. Run the application: `python image_converter.py`
 2. Browse and select one or more input images (multi-select supported)
